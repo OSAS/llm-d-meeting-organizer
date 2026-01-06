@@ -443,6 +443,12 @@ function hasAlreadyNotified(meeting) {
  * Record that we have sent notifications for this meeting
  */
 function recordNotificationSent(meeting) {
+  // Skip saving notification records in debug mode to avoid blocking real notifications
+  if (CONFIG.DEBUG_MODE) {
+    console.log(`🧪 Debug mode - NOT recording notification for "${meeting.title}" (test only)`);
+    return;
+  }
+  
   const key = getMeetingNotificationKey(meeting);
   const properties = PropertiesService.getScriptProperties();
   
