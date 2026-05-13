@@ -116,7 +116,7 @@ function getUpcomingMeetings() {
       
       // Only include meetings starting within 1 minute early to 15 seconds late (tighter window)
       // This prevents 2-minute early notifications while still allowing for trigger timing variations
-      if (secondsUntilStart >= -60 && secondsUntilStart <= 15) {
+      if (secondsUntilStart >= -15 && secondsUntilStart <= 60) {
         console.log(`✅ Meeting is starting NOW (within 1min early to 15sec late)`);
         
         // Check if this meeting matches any of our configured prefixes
@@ -830,8 +830,8 @@ function testTimingWindow() {
   // Current logic: Look for meetings starting within tighter notification window
   const searchStart = new Date(now.getTime() - (90 * 1000)); // 90 seconds ago
   const searchEnd = new Date(now.getTime() + (3 * 60 * 1000)); // 3 minutes from now
-  const notifyStart = new Date(now.getTime() - (60 * 1000)); // 60 seconds ago (1min early)
-  const notifyEnd = new Date(now.getTime() + (15 * 1000)); // 15 seconds from now
+  const notifyStart = new Date(now.getTime() - (15 * 1000)); // 15 seconds ago (15sec late)
+  const notifyEnd = new Date(now.getTime() + (60 * 1000)); // 60 seconds from now (1min early)
   
   console.log(`🕐 Current time: ${now.toLocaleTimeString()}`);
   console.log(`📅 Search window (3min): ${searchStart.toLocaleTimeString()} - ${searchEnd.toLocaleTimeString()}`);
@@ -851,7 +851,7 @@ function testTimingWindow() {
   for (const meeting of exampleMeetings) {
     const timeUntilStart = meeting.startTime.getTime() - now.getTime();
     const secondsUntilStart = Math.floor(timeUntilStart / 1000);
-    const wouldNotify = secondsUntilStart >= -60 && secondsUntilStart <= 15;
+    const wouldNotify = secondsUntilStart >= -15 && secondsUntilStart <= 60;
     
     console.log(`   Meeting starting ${meeting.desc} (${secondsUntilStart}s): ${wouldNotify ? '✅ NOTIFY' : '❌ Skip'}`);
   }
