@@ -1040,6 +1040,14 @@ function testNextMeetingNotification() {
         continue;
       }
       
+      // Skip meetings that already started (calendar.getEvents returns events that
+      // overlap the range, so an in-progress meeting can appear even though we only
+      // want the NEXT upcoming one)
+      if (startTime < now) {
+        console.log(`⏭️ Skipping "${title}" - already started at ${startTime.toLocaleString()}`);
+        continue;
+      }
+      
       const meetingDetails = extractMeetingDetails(event);
       
       console.log(`📋 Checking event: "${title}" at ${startTime.toLocaleString()}`);
