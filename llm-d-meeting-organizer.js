@@ -2,8 +2,9 @@
  * LLM-D Meeting File Organizer - Google Apps Script Version
  * 
  * This script automatically:
- * 1. Finds files matching configured meeting patterns (e.g., "[PUBLIC] llm-d sig-*")
- * 2. Moves them to organized folders in Google Drive
+ * 1. Finds meeting recording subfolders (e.g., "[PUBLIC] llm-d sig-* (recurring)")
+ *    inside the source "Google Meet" folder that match configured meeting patterns
+ * 2. Moves the files inside those subfolders to organized folders in Google Drive
  * 3. Sends Slack notifications via webhooks
  * 4. Runs automatically every 15 minutes
  */
@@ -35,7 +36,7 @@ function organizeMeetingFiles() {
     if (CONFIG.DEBUG_MODE) {
       console.log(`🐛 DEBUG: Source folder ID: ${CONFIG.SOURCE_FOLDER_ID}`);
       files.forEach((file, index) => {
-        console.log(`🐛 DEBUG: [${index + 1}/${files.length}] Found file: ${file.title}`);
+        console.log(`🐛 DEBUG: [${index + 1}/${files.length}] Found file: ${file.title} (folder: "${file.meetingPrefix}")`);
       });
     }
     
@@ -109,24 +110,46 @@ function organizeMeetingFiles() {
 
 /**
  * Find all files in the source folder that match configured meeting patterns
+ *
+ * Google Drive now organizes Google Meet recordings into per-meeting-series
+ * subfolders (e.g. "Google Meet" -> "[PUBLIC] llm-d Community Meeting (recurring)")
+ * instead of dropping files flat into a single "meet recordings" folder. Each
+ * subfolder's name is matched against the configured meeting prefixes, and every
+ * file found directly inside a matching subfolder is tagged with that folder's
+ * meeting configuration.
  */
 function findMeetingFiles() {
   const files = [];
   const sourceFolder = DriveApp.getFolderById(CONFIG.SOURCE_FOLDER_ID);
-  const allFiles = sourceFolder.getFiles();
+  const subFolders = sourceFolder.getFolders();
   
-  while (allFiles.hasNext()) {
-    const file = allFiles.next();
-    const fileName = file.getName();
+  while (subFolders.hasNext()) {
+    const subFolder = subFolders.next();
+    const folderName = subFolder.getName();
     
-    // Check if file matches any configured meeting prefix
-    const matchingConfig = findMatchingConfig(fileName);
-    if (matchingConfig) {
+    // Check if the subfolder name matches any configured meeting prefix
+    const matchingConfig = findMatchingConfig(folderName);
+    if (!matchingConfig) {
+      if (CONFIG.DEBUG_MODE) {
+        console.log(`🐛 DEBUG: Skipping folder "${folderName}" - no matching meeting configuration`);
+      }
+      continue;
+    }
+    
+    const { prefix, config } = matchingConfig;
+    const folderFiles = subFolder.getFiles();
+    
+    while (folderFiles.hasNext()) {
+      const file = folderFiles.next();
+      const fileName = file.getName();
       files.push({
         id: file.getId(),
         title: fileName,
         webViewLink: file.getUrl(),
-        mimeType: file.getBlob().getContentType()
+        mimeType: file.getBlob().getContentType(),
+        meetingPrefix: prefix,
+        meetingConfig: config,
+        isChat: fileName.includes('Chat')
       });
     }
   }
@@ -136,7 +159,8 @@ function findMeetingFiles() {
 
 
 /**
- * Find matching configuration for a file title
+ * Find matching configuration for a title (used for both subfolder names and
+ * individual file names, since matching is a simple substring check)
  */
 function findMatchingConfig(title) {
   for (const [prefix, config] of Object.entries(CONFIG.MEETING_CONFIGS)) {
@@ -149,36 +173,36 @@ function findMatchingConfig(title) {
 
 /**
  * Group files by their meeting configuration, handling Chat files separately
+ *
+ * Each file already carries the meeting prefix/config it was tagged with in
+ * findMeetingFiles(), derived from the subfolder it was found in.
  */
 function groupFilesByMeetingConfig(files) {
   const grouped = {};
   const chatFiles = {};
   
   files.forEach(file => {
-    const match = findMatchingConfig(file.title);
-    if (match) {
-      const { prefix, config, isChat } = match;
-      
-      if (isChat) {
-        // Handle Chat files separately - they don't need pairs
-        if (!chatFiles[prefix]) {
-          chatFiles[prefix] = {
-            config,
-            files: [],
-            isChat: true
-          };
-        }
-        chatFiles[prefix].files.push(file);
-      } else {
-        // Handle regular files that need pairs
-        if (!grouped[prefix]) {
-          grouped[prefix] = {
-            config,
-            files: []
-          };
-        }
-        grouped[prefix].files.push(file);
+    const { meetingPrefix: prefix, meetingConfig: config, isChat } = file;
+    
+    if (isChat) {
+      // Handle Chat files separately - they don't need pairs
+      if (!chatFiles[prefix]) {
+        chatFiles[prefix] = {
+          config,
+          files: [],
+          isChat: true
+        };
       }
+      chatFiles[prefix].files.push(file);
+    } else {
+      // Handle regular files that need pairs
+      if (!grouped[prefix]) {
+        grouped[prefix] = {
+          config,
+          files: []
+        };
+      }
+      grouped[prefix].files.push(file);
     }
   });
   

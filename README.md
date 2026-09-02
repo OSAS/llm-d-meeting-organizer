@@ -5,7 +5,7 @@ Google Apps Script solutions for meeting management, including file organization
 ## Scripts Included
 
 ### Meeting File Organizer (`llm-d-meeting-organizer.js`)
-- Detects files with configured meeting patterns (e.g., `[PUBLIC] llm-d sig-*`)
+- Detects meeting-series subfolders inside the "Google Meet" source folder that match configured meeting patterns (e.g., `[PUBLIC] llm-d sig-*`) and processes the files inside them
 - Requires both "Notes by Gemini" and "Recording" files for regular meetings
 - Processes chat files independently without requiring pairs
 - Moves files to exact target folders in Google Drive
@@ -53,7 +53,7 @@ Google Apps Script solutions for meeting management, including file organization
 
 The application:
 
-1. Searches for files matching configured meeting patterns (e.g., `[PUBLIC] llm-d sig-*`, `[PUBLIC] llm-d Community Meeting`)
+1. Searches the "Google Meet" source folder for meeting-series subfolders matching configured meeting patterns (e.g., `[PUBLIC] llm-d sig-*`, `[PUBLIC] llm-d Community Meeting`) and reads the files inside them
 2. Groups files by meeting configuration
 3. Only processes complete pairs where both "Notes by Gemini" and "Recording" files are present
 4. Processes chat files immediately without requiring pairs

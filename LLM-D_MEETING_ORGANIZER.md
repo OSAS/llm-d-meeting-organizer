@@ -3,8 +3,8 @@
 ## Overview
 
 The Google Apps Script will:
-1. **Scan** your specified source folder for meeting recordings
-2. **Match** files with configured meeting prefixes (like `[PUBLIC] llm-d sig-autoscaling` or `[PUBLIC] llm-d Community Meeting`)
+1. **Scan** your "Google Meet" source folder for meeting-series subfolders (e.g. `[PUBLIC] llm-d Community Meeting (recurring)`)
+2. **Match** subfolder names with configured meeting prefixes (like `[PUBLIC] llm-d sig-autoscaling` or `[PUBLIC] llm-d Community Meeting`) and process the files inside them
 3. **Move** them to exact target folders you specify (no searching required)
 4. **Send** Slack notifications via webhooks to corresponding channels
 5. **Run automatically** every 15 minutes
@@ -21,7 +21,7 @@ The Google Apps Script will:
 
 You need to get the Google Drive folder IDs for:
 
-1. **Source folder** - Your "meet recordings" folder where new recordings appear
+1. **Source folder** - Your "Google Meet" folder in Drive. Google Meet automatically creates a subfolder per recurring meeting series inside this folder (e.g. `[PUBLIC] llm-d Community Meeting (recurring)`), and the script looks inside those subfolders for files to move.
 2. **Target folders** - Exact folders where you want different meeting types moved
 
 To get folder IDs:
@@ -30,7 +30,7 @@ To get folder IDs:
 3. The folder ID is the part after `/folders/`
 
 **Example:**
-- Source folder: `1ABC123def456ghi789` (your "meet recordings" folder)
+- Source folder: `1ABC123def456ghi789` (your "Google Meet" folder, containing per-meeting-series subfolders)
 - sig-autoscaling target: `17p-bGjhOPBXoEljHiDURRzwQ2ieYuizj` ("Meeting Recordings & Transcripts" folder)
 - Community meeting target: `2XYZ789abc123def456` (community meeting folder)
 
@@ -93,7 +93,7 @@ const CONFIG = {
 - Replace folder IDs with your actual Google Drive folder IDs
 - Replace webhook URLs with your actual Slack webhook URLs
 - Add more meeting configurations as needed
-- Each meeting prefix gets moved to its exact target folder - no subfolder creation
+- Each meeting prefix is matched against Google Meet's auto-created subfolder names (e.g. `[PUBLIC] llm-d sig-autoscaling (recurring)`), and the files inside a matching subfolder get moved to its exact target folder - no target subfolder creation
 
 ### Step 5: Enable Required APIs
 
@@ -177,10 +177,10 @@ const CONFIG = {
 ### Common Issues
 
 **Files not being found:**
-- Verify files are in your configured SOURCE_FOLDER_ID
-- Verify file names match exactly the prefixes in MEETING_CONFIGS
+- Verify your configured SOURCE_FOLDER_ID is the "Google Meet" folder containing per-meeting-series subfolders
+- Verify subfolder names match the prefixes in MEETING_CONFIGS (e.g. `[PUBLIC] llm-d sig-autoscaling (recurring)`)
 - Make sure files aren't in trash
-- Check that your Google account can access the source folder
+- Check that your Google account can access the source folder and its subfolders
 
 **Slack notifications not working:**
 - Verify webhook URLs are correct
@@ -203,7 +203,7 @@ const CONFIG = {
 ```javascript
 function testFindFiles() {
   const files = findMeetingFiles();
-  console.log(`Found ${files.length} files:`, files.map(f => f.title));
+  console.log(`Found ${files.length} files:`, files.map(f => `${f.title} (${f.meetingPrefix})`));
 }
 ```
 
